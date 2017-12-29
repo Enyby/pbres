@@ -391,264 +391,200 @@ void main_t(char *outfile, char *cfgfile, int nfiles, char **infiles) {
 
 char palette_index_four[4] = {0x00, 0x56, 0xAC, 0xFF};
 
+typedef struct  {
+  unsigned char magic[2];
+} bmpfile_magic;
+ 
+typedef struct  {
+	unsigned int bmp_size;
+	unsigned short reserved1;
+	unsigned short reserved2;
+	unsigned int bmp_offset;
+} bmpfile_header;
+
+typedef struct {
+  unsigned int header_sz;
+  unsigned int width;
+  unsigned int height;
+  unsigned short nplanes;
+  unsigned short bitspp;
+  unsigned int compress_type;
+  unsigned int bmp_bytesz;
+  unsigned int hres;
+  unsigned int vres;
+  unsigned int ncolors;
+  unsigned int nimpcolors;
+} bmpfile_info;
+
+typedef struct  {
+	uint8_t blue;
+	uint8_t green;
+	uint8_t red;
+	uint8_t reserved;
+} bmpfile_rbgquad;
+
 void bmp_from_bm(FILE *ofd, unsigned char *data, int len) {
 	//fwrite(data, 1, len, ofd); // default
-	
-  int v2; // edx@2
-  int v3; // eax@2
-  int v4; // ebx@2
-  signed int v5; // esi@2
-  int v6; // eax@6
-  size_t v7; // ebx@10
-  uint16_t v8; // bx@10
-  int v9; // edx@10
-  uint16_t v10; // cx@12
-  int v11; // esi@14
-  int v12; // ebx@16
-  int v13; // edi@16
-  _BYTE *v14; // edx@16
-  int v16; // eax@25
-  char *v17; // esi@26
-  signed int v18; // edi@26
-  char *v19; // ecx@28
-  int v20; // eax@28
-  int v21; // ebx@28
-  char v22; // dl@30
-  int v23; // eax@50
-  size_t v24; // ebx@51
-  int v25; // eax@51
-  int v26; // edx@53
-  int v27; // edx@57
-  char v28; // al@58
-  char *i; // [sp+14h] [bp-8Ch]@28
-  int v30; // [sp+18h] [bp-88h]@12
-  void *v31; // [sp+24h] [bp-7Ch]@2
-  _DWORD *v32; // [sp+28h] [bp-78h]@2
-  _BYTE *v33; // [sp+2Ch] [bp-74h]@2
-  int v34; // [sp+3Ch] [bp-64h]@6
-  void *v35; // [sp+40h] [bp-60h]@6
-  signed int v36; // [sp+44h] [bp-5Ch]@12
-  char v37; // [sp+48h] [bp-58h]@0
-  FILE *v38; // [sp+4Ch] [bp-54h]@1
-  void *v39; // [sp+50h] [bp-50h]@10
-  char *v40; // [sp+54h] [bp-4Ch]@14
-  unsigned int v41; // [sp+58h] [bp-48h]@2
-  int v42; // [sp+5Ch] [bp-44h]@0
-  char v43; // [sp+62h] [bp-3Eh]@2
-  char v44; // [sp+63h] [bp-3Dh]@15
-  int v45; // [sp+64h] [bp-3Ch]@0
-  char v46; // [sp+68h] [bp-38h]@2
-  int v47; // [sp+80h] [bp-20h]@14
-  int v48; // [sp+84h] [bp-1Ch]@14
 
-  v38 = ofd;
+  int v2; // rax@5
+  bmpfile_rbgquad *rbg; // ST40_4@20
+  bmpfile_rbgquad *v4; // ST40_4@22
+  uint8_t *mask; // [sp+20h] [bp-68h]@0
+  uint8_t *mask_pos; // [sp+24h] [bp-64h]@36
+  unsigned int bitmap_size; // [sp+28h] [bp-60h]@5
+  unsigned int mask_line; // [sp+2Ch] [bp-5Ch]@0
+  unsigned int bmp_line; // [sp+30h] [bp-58h]@5
+  uint8_t *bmp_pos; // [sp+34h] [bp-54h]@26
+  uint8_t *bmp_posa; // [sp+34h] [bp-54h]@36
+  uint8_t *bm_pos; // [sp+38h] [bp-50h]@26
+  uint8_t *bitmap; // [sp+3Ch] [bp-4Ch]@23
+  uint8_t *ppos; // [sp+44h] [bp-44h]@9
+  uint8_t *palette; // [sp+48h] [bp-40h]@9
+  bmpfile_info *info; // [sp+4Ch] [bp-3Ch]@3
+  bmpfile_header *header; // [sp+50h] [bp-38h]@3
+  bmpfile_magic *magic; // [sp+54h] [bp-34h]@3
+
+  uint8_t mask_pal; // [sp+5Ch] [bp-2Ch]@0
+  int usemask; // [sp+60h] [bp-28h]@3
+  int palette_size; // [sp+64h] [bp-24h]@9
+  int ncolors; // [sp+68h] [bp-20h]@5
+  int y; // [sp+6Ch] [bp-1Ch]@25
+  int ya; // [sp+6Ch] [bp-1Ch]@35
+  int j; // [sp+70h] [bp-18h]@27
+  int ja; // [sp+70h] [bp-18h]@37
+  int i; // [sp+74h] [bp-14h]@10
+  int ia; // [sp+74h] [bp-14h]@15
+  int ib; // [sp+74h] [bp-14h]@26
+  unsigned int ic; // [sp+74h] [bp-14h]@36
+  uint8_t mask_byte; // [sp+79h] [bp-Fh]@37
+  uint8_t source_val; // [sp+7Ah] [bp-Eh]@27
+  uint8_t bm_depth; // [sp+7Fh] [bp-9h]@3
   
-  unsigned char *a2 = data;
-  
-  v33 = malloc(2u);
-  v32 = malloc(0xCu);
-  *v32 = 0;
-  v32[1] = 0;
-  v32[2] = 0;
-  v31 = malloc(0x28u);
-  memset(v31, 0, 0x28u);
-  v2 = *(_WORD *)a2;
-  v43 = *(_WORD *)(a2 + 4);
-  v46 = *(_WORD *)(a2 + 4) >> 15;
-  v3 = *(_WORD *)(a2 + 2);
-  v41 = (v2 + 3) & 0xFFFFFFFC;
-  *v33 = 66;
-  v33[1] = 77;
-  v4 = v3 * v41;
-  *((_DWORD *)v31 + 2) = v3;
-  *(_DWORD *)v31 = 40;
-  *((_DWORD *)v31 + 1) = v2;
-  *((_WORD *)v31 + 6) = 1;
-  *((_WORD *)v31 + 7) = 8;
-  *((_DWORD *)v31 + 4) = 0;
-  *((_DWORD *)v31 + 7) = 166;
-  *((_DWORD *)v31 + 6) = 166;
-  v5 = 1 << v43;
-  *((_DWORD *)v31 + 8) = 1 << v43;
-  if ( v46 )
-    *((_DWORD *)v31 + 8) = v5 + 1;
-  if ( *((_DWORD *)v31 + 8) <= 0xFu )
-    *((_DWORD *)v31 + 8) = 16;
-  *((_DWORD *)v31 + 9) = 0;
-  *((_DWORD *)v31 + 5) = v4;
-  v34 = 4 * *((_DWORD *)v31 + 8);
-  v35 = malloc(v34);
-  v6 = (int)memset(v35, 0, v34);
-  switch ( v43 )
+  ibitmap *bm = data;
+
+  magic = (bmpfile_magic *)malloc(2u);
+  header = (bmpfile_header *)malloc(0xCu);
+  memset(header, 0, 0xCu);
+  info = (bmpfile_info *)malloc(0x28u);
+  memset(info, 0, 0x28u);
+  bm_depth = bm->depth;
+  usemask = 0;
+  if ( (bm->depth & 0x8000u) != 0 )
+    usemask = 1;
+  v2 = 8 * bm->width + 7;
+  bmp_line = (((signed int)((HIDWORD(v2) >> 29) + v2) >> 3) + 3) & 0xFFFFFFFC;
+  bitmap_size = bmp_line * bm->height;
+  magic->magic[0] = 66;
+  magic->magic[1] = 77;
+  info->header_sz = 40;
+  info->width = bm->width;
+  info->height = bm->height;
+  info->nplanes = 1;
+  info->bitspp = 8;
+  info->compress_type = 0;
+  info->vres = 166;
+  info->hres = 166;
+  info->ncolors = 1 << bm_depth;
+  ncolors = info->ncolors;
+  if ( usemask )
+    ++info->ncolors;
+  if ( info->ncolors <= 0xF )
+    info->ncolors = 16;
+  info->nimpcolors = 0;
+  info->bmp_bytesz = bitmap_size;
+  palette_size = 4 * info->ncolors;
+  palette = (uint8_t *)malloc(4 * info->ncolors);
+  memset(palette, 0, palette_size);
+  ppos = palette;
+  switch ( bm_depth )
   {
-    case 4:
-      if ( v5 > 0 )
+    case 4u:
+      for ( i = 0; i < ncolors; ++i )
       {
-        v26 = 0;
-        do
-        {
-          LOBYTE(v6) = v26;
-          v6 = v26 + 16 * v6;
-          *((_BYTE *)v35 + 4 * v26) = v6;
-          *((_BYTE *)v35 + 4 * v26 + 2) = v6;
-          *((_BYTE *)v35 + 4 * v26++ + 1) = v6;
-        }
-        while ( v26 != v5 );
+        *ppos = 17 * i;
+        ppos[2] = 17 * i;
+        ppos[1] = 17 * i;
+        ppos += 4;
       }
       break;
-    case 2:
-      if ( v5 > 0 )
+    case 2u:
+      for ( ia = 0; ia < ncolors; ++ia )
       {
-        v27 = 0;
-        do
-        {
-          v28 = palette_index_four[v27];
-          *((_BYTE *)v35 + 4 * v27) = v28;
-          *((_BYTE *)v35 + 4 * v27 + 2) = v28;
-          *((_BYTE *)v35 + 4 * v27++ + 1) = v28;
-        }
-        while ( v27 != v5 );
+        *ppos = palette_index_four[ia];
+        ppos[2] = palette_index_four[ia];
+        ppos[1] = palette_index_four[ia];
+        ppos += 4;
       }
       break;
-    case 1:
-      *(_BYTE *)v35 = 0;
-      *((_BYTE *)v35 + 2) = 0;
-      *((_BYTE *)v35 + 1) = 0;
-      v23 = (int)v35 + 4;
-      *((_BYTE *)v35 + 4) = -1;
-      *(_BYTE *)(v23 + 2) = -1;
-      *(_BYTE *)(v23 + 1) = -1;
-      if ( v46 != 1 )
-        goto LABEL_10;
-      goto LABEL_51;
+    case 1u:
+      *palette = 0;
+      palette[2] = 0;
+      palette[1] = 0;
+      rbg = (bmpfile_rbgquad *)(palette + 4);
+      rbg->blue = -1;
+      rbg->red = -1;
+      rbg->green = -1;
+      break;
   }
-  if ( v46 != 1 )
+  if ( usemask == 1 )
   {
-LABEL_10:
-    v7 = v4 + 16;
-    v39 = malloc(v7);
-    memset(v39, 0, v7);
-    v8 = *(_WORD *)(a2 + 2);
-    v9 = *(_WORD *)(a2 + 2);
-    goto LABEL_11;
+    mask_pal = ncolors;
+    v4 = (bmpfile_rbgquad *)&palette[4 * ncolors];
+    palette[4 * ncolors] = 64;
+    v4->green = -128;
+    v4->red = -128;
   }
-LABEL_51:
-  v24 = v4 + 16;
-  v25 = (int)v35 + 4 * v5;
-  *(_BYTE *)v25 = 64;
-  *(_BYTE *)(v25 + 1) = -128;
-  *(_BYTE *)(v25 + 2) = -128;
-  v39 = malloc(v24);
-  memset(v39, 0, v24);
-  v8 = *(_WORD *)(a2 + 2);
-  v9 = *(_WORD *)(a2 + 2);
-  v37 = 1 << v43;
-  v45 = a2 + v9 * *(_WORD *)(a2 + 6) + 8;
-  v42 = (*(_WORD *)a2 + 7) >> 3;
-LABEL_11:
-  if ( v9 )
+  bitmap = (uint8_t *)malloc(bitmap_size + 16);
+  memset(bitmap, 0, bitmap_size + 16);
+  if ( usemask )
   {
-    v36 = 0;
-    v10 = *(_WORD *)(a2 + 6);
-    v30 = (uint8_t)(v5 - 1);
-    do
+    mask = (uint8_t *)&bm[1] + bm->height * bm->scanline;
+    mask_line = (bm->width + 7) / 8;
+  }
+  for ( y = 0; bm->height > y; ++y )
+  {
+    bm_pos = (uint8_t *)&bm[1] + y * bm->scanline;
+    bmp_pos = &bitmap[bmp_line * (bm->height - y - 1)];
+    for ( ib = 0; bm->scanline > ib; ++ib )
     {
-      if ( v10 )
-      {
-        v40 = (char *)(a2 + 8 + v36 * v10);
-        v48 = 0;
-        v47 = (int)v39 + v41 * (v9 - v36 - 1);
-        v11 = 8 / (uint8_t)v43;
-        while ( 1 )
-        {
-          v44 = *v40;
-          if ( v11 )
-          {
-            v12 = 0;
-            v13 = (uint8_t)(8 - v43);
-            v14 = (_BYTE *)v47;
-            do
-            {
-              ++v12;
-              *v14++ = (signed int)(uint8_t)(v44 & (v30 << v13)) >> v13;
-              v13 += (uint8_t)-v43;
-            }
-            while ( v12 != v11 );
-            v47 += v11;
-            v10 = *(_WORD *)(a2 + 6);
-          }
-          if ( v10 <= ++v48 )
-            break;
-          ++v40;
-        }
-        v8 = *(_WORD *)(a2 + 2);
-      }
-      v9 = v8;
-      ++v36;
-    }
-    while ( v8 > v36 );
-  }
-  if ( v46 )
-  {
-    v16 = v8;
-    if ( v8 )
-    {
-      v17 = (char *)v45;
-      v18 = 0;
-      do
-      {
-        if ( v42 )
-        {
-          v19 = v17;
-          v20 = (int)v39 + v41 * (v16 - v18 - 1);
-          v21 = 0;
-          for ( i = v17; ; v19 = i )
-          {
-            v22 = *v19;
-            if ( *v19 >= 0 )
-              *(_BYTE *)v20 = v37;
-            if ( !(v22 & 0x40) )
-              *(_BYTE *)(v20 + 1) = v37;
-            if ( !(v22 & 0x20) )
-              *(_BYTE *)(v20 + 2) = v37;
-            if ( !(v22 & 0x10) )
-              *(_BYTE *)(v20 + 3) = v37;
-            if ( !(v22 & 8) )
-              *(_BYTE *)(v20 + 4) = v37;
-            if ( !(v22 & 4) )
-              *(_BYTE *)(v20 + 5) = v37;
-            if ( !(v22 & 2) )
-              *(_BYTE *)(v20 + 6) = v37;
-            if ( !(v22 & 1) )
-              *(_BYTE *)(v20 + 7) = v37;
-            ++v21;
-            v20 += 8;
-            if ( v21 == v42 )
-              break;
-            ++i;
-          }
-          v8 = *(_WORD *)(a2 + 2);
-        }
-        ++v18;
-        v16 = v8;
-        v17 += v42;
-      }
-      while ( v8 > v18 );
+      source_val = *bm_pos;
+      for ( j = 0; 8 / bm_depth > j; ++j )
+        *bmp_pos++ = (source_val & ((uint8_t)((1 << bm_depth) - 1) << (bm_depth * ~(_BYTE)j + 8))) >> (bm_depth * ~(_BYTE)j + 8);
+      ++bm_pos;
     }
   }
-  v32[2] = v34 + 54;
-  *v32 = *((_DWORD *)v31 + 5) + v34 + 54;
-  fwrite(v33, 1u, 2u, v38);
-  fwrite(v32, 1u, 0xCu, v38);
-  fwrite(v31, 1u, 0x28u, v38);
-  fwrite(v35, 1u, v34, v38);
-  fwrite(v39, 1u, *((_DWORD *)v31 + 5), v38);
+  if ( usemask == 1 )
+  {
+    for ( ya = 0; bm->height > ya; ++ya )
+    {
+      mask_pos = &mask[mask_line * ya];
+      bmp_posa = &bitmap[bmp_line * (bm->height - ya - 1)];
+      for ( ic = 0; ic < mask_line; ++ic )
+      {
+        mask_byte = *mask_pos;
+        for ( ja = 0; ja <= 7; ++ja )
+        {
+          if ( !(mask_byte & (uint8_t)(1 << (~(_BYTE)ja + 8))) )
+            *bmp_posa = mask_pal;
+          ++bmp_posa;
+        }
+        ++mask_pos;
+      }
+    }
+  }
+  header->bmp_offset = palette_size + 54;
+  header->bmp_size = info->bmp_bytesz + header->bmp_offset;
+  fwrite(magic, 1u, 2u, ofd);
+  fwrite(header, 1u, 0xCu, ofd);
+  fwrite(info, 1u, 0x28u, ofd);
+  fwrite(palette, 1u, palette_size, ofd);
+  fwrite(bitmap, 1u, info->bmp_bytesz, ofd);
 
-  free(v33);
-  free(v32);
-  free(v31);
-  free(v35);
-  free(v39);
+  free(magic);
+  free(header);
+  free(info);
+  free(palette);
+  free(bitmap);
 }
 
 void unpack_resource(FILE *fd, char *name, unsigned long len, int pos, unsigned long clen, int decode) {
