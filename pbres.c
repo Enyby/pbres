@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 #include <zlib.h>
 
 #define MAXSIZE 520000
@@ -60,9 +61,11 @@ void terminate(char *fmt, ...) {
 
 void usage(void) {
 
+	fprintf(stderr, "Version: 0.4\n");
 	fprintf(stderr, "Usage: pbres -c output.c resource [ ... ]\n");
 	fprintf(stderr, "       pbres -t output.pbt config.txt resource [ ... ]\n");
 	fprintf(stderr, "       pbres -u input.pbt resource\n");
+	fprintf(stderr, "       pbres -d input.pbt\n");
 	fprintf(stderr, "       pbres -l input.pbt\n");
 	exit(1);
 
@@ -70,7 +73,7 @@ void usage(void) {
 
 void write_as_c(FILE *f, unsigned char *data, int len) {
 
-	char buf[256];
+	char buf[1024];
 	int i, n, ll;
 
 	while (len > 0) {
@@ -374,7 +377,281 @@ void main_t(char *outfile, char *cfgfile, int nfiles, char **infiles) {
 
 }
 
-void unpack_resource(FILE *fd, char *name, unsigned long len, int pos, unsigned long clen) {
+#define _BYTE  uint8_t
+#define _WORD  uint16_t
+#define _DWORD uint32_t
+#define _QWORD uint64_t
+
+#define LOBYTE(x)   (*((_BYTE*)&(x)))   // low byte
+#define LOWORD(x)   (*((_WORD*)&(x)))   // low word
+#define LODWORD(x)  (*((_DWORD*)&(x)))  // low dword
+#define HIBYTE(x)   (*((_BYTE*)&(x)+1))
+#define HIWORD(x)   (*((_WORD*)&(x)+1))
+#define HIDWORD(x) (*((_DWORD*)&(x)+1))
+
+char palette_index_four[4] = {0x00, 0x56, 0xAC, 0xFF};
+
+void bmp_from_bm(FILE *ofd, unsigned char *data, int len) {
+	//fwrite(data, 1, len, ofd); // default
+	
+  int v2; // edx@2
+  int v3; // eax@2
+  int v4; // ebx@2
+  signed int v5; // esi@2
+  int v6; // eax@6
+  size_t v7; // ebx@10
+  uint16_t v8; // bx@10
+  int v9; // edx@10
+  uint16_t v10; // cx@12
+  int v11; // esi@14
+  int v12; // ebx@16
+  int v13; // edi@16
+  _BYTE *v14; // edx@16
+  int v16; // eax@25
+  char *v17; // esi@26
+  signed int v18; // edi@26
+  char *v19; // ecx@28
+  int v20; // eax@28
+  int v21; // ebx@28
+  char v22; // dl@30
+  int v23; // eax@50
+  size_t v24; // ebx@51
+  int v25; // eax@51
+  int v26; // edx@53
+  int v27; // edx@57
+  char v28; // al@58
+  char *i; // [sp+14h] [bp-8Ch]@28
+  int v30; // [sp+18h] [bp-88h]@12
+  void *v31; // [sp+24h] [bp-7Ch]@2
+  _DWORD *v32; // [sp+28h] [bp-78h]@2
+  _BYTE *v33; // [sp+2Ch] [bp-74h]@2
+  int v34; // [sp+3Ch] [bp-64h]@6
+  void *v35; // [sp+40h] [bp-60h]@6
+  signed int v36; // [sp+44h] [bp-5Ch]@12
+  char v37; // [sp+48h] [bp-58h]@0
+  FILE *v38; // [sp+4Ch] [bp-54h]@1
+  void *v39; // [sp+50h] [bp-50h]@10
+  char *v40; // [sp+54h] [bp-4Ch]@14
+  unsigned int v41; // [sp+58h] [bp-48h]@2
+  int v42; // [sp+5Ch] [bp-44h]@0
+  char v43; // [sp+62h] [bp-3Eh]@2
+  char v44; // [sp+63h] [bp-3Dh]@15
+  int v45; // [sp+64h] [bp-3Ch]@0
+  char v46; // [sp+68h] [bp-38h]@2
+  int v47; // [sp+80h] [bp-20h]@14
+  int v48; // [sp+84h] [bp-1Ch]@14
+
+  v38 = ofd;
+  
+  unsigned char *a2 = data;
+  
+  v33 = malloc(2u);
+  v32 = malloc(0xCu);
+  *v32 = 0;
+  v32[1] = 0;
+  v32[2] = 0;
+  v31 = malloc(0x28u);
+  memset(v31, 0, 0x28u);
+  v2 = *(_WORD *)a2;
+  v43 = *(_WORD *)(a2 + 4);
+  v46 = *(_WORD *)(a2 + 4) >> 15;
+  v3 = *(_WORD *)(a2 + 2);
+  v41 = (v2 + 3) & 0xFFFFFFFC;
+  *v33 = 66;
+  v33[1] = 77;
+  v4 = v3 * v41;
+  *((_DWORD *)v31 + 2) = v3;
+  *(_DWORD *)v31 = 40;
+  *((_DWORD *)v31 + 1) = v2;
+  *((_WORD *)v31 + 6) = 1;
+  *((_WORD *)v31 + 7) = 8;
+  *((_DWORD *)v31 + 4) = 0;
+  *((_DWORD *)v31 + 7) = 166;
+  *((_DWORD *)v31 + 6) = 166;
+  v5 = 1 << v43;
+  *((_DWORD *)v31 + 8) = 1 << v43;
+  if ( v46 )
+    *((_DWORD *)v31 + 8) = v5 + 1;
+  if ( *((_DWORD *)v31 + 8) <= 0xFu )
+    *((_DWORD *)v31 + 8) = 16;
+  *((_DWORD *)v31 + 9) = 0;
+  *((_DWORD *)v31 + 5) = v4;
+  v34 = 4 * *((_DWORD *)v31 + 8);
+  v35 = malloc(v34);
+  v6 = (int)memset(v35, 0, v34);
+  switch ( v43 )
+  {
+    case 4:
+      if ( v5 > 0 )
+      {
+        v26 = 0;
+        do
+        {
+          LOBYTE(v6) = v26;
+          v6 = v26 + 16 * v6;
+          *((_BYTE *)v35 + 4 * v26) = v6;
+          *((_BYTE *)v35 + 4 * v26 + 2) = v6;
+          *((_BYTE *)v35 + 4 * v26++ + 1) = v6;
+        }
+        while ( v26 != v5 );
+      }
+      break;
+    case 2:
+      if ( v5 > 0 )
+      {
+        v27 = 0;
+        do
+        {
+          v28 = palette_index_four[v27];
+          *((_BYTE *)v35 + 4 * v27) = v28;
+          *((_BYTE *)v35 + 4 * v27 + 2) = v28;
+          *((_BYTE *)v35 + 4 * v27++ + 1) = v28;
+        }
+        while ( v27 != v5 );
+      }
+      break;
+    case 1:
+      *(_BYTE *)v35 = 0;
+      *((_BYTE *)v35 + 2) = 0;
+      *((_BYTE *)v35 + 1) = 0;
+      v23 = (int)v35 + 4;
+      *((_BYTE *)v35 + 4) = -1;
+      *(_BYTE *)(v23 + 2) = -1;
+      *(_BYTE *)(v23 + 1) = -1;
+      if ( v46 != 1 )
+        goto LABEL_10;
+      goto LABEL_51;
+  }
+  if ( v46 != 1 )
+  {
+LABEL_10:
+    v7 = v4 + 16;
+    v39 = malloc(v7);
+    memset(v39, 0, v7);
+    v8 = *(_WORD *)(a2 + 2);
+    v9 = *(_WORD *)(a2 + 2);
+    goto LABEL_11;
+  }
+LABEL_51:
+  v24 = v4 + 16;
+  v25 = (int)v35 + 4 * v5;
+  *(_BYTE *)v25 = 64;
+  *(_BYTE *)(v25 + 1) = -128;
+  *(_BYTE *)(v25 + 2) = -128;
+  v39 = malloc(v24);
+  memset(v39, 0, v24);
+  v8 = *(_WORD *)(a2 + 2);
+  v9 = *(_WORD *)(a2 + 2);
+  v37 = 1 << v43;
+  v45 = a2 + v9 * *(_WORD *)(a2 + 6) + 8;
+  v42 = (*(_WORD *)a2 + 7) >> 3;
+LABEL_11:
+  if ( v9 )
+  {
+    v36 = 0;
+    v10 = *(_WORD *)(a2 + 6);
+    v30 = (uint8_t)(v5 - 1);
+    do
+    {
+      if ( v10 )
+      {
+        v40 = (char *)(a2 + 8 + v36 * v10);
+        v48 = 0;
+        v47 = (int)v39 + v41 * (v9 - v36 - 1);
+        v11 = 8 / (uint8_t)v43;
+        while ( 1 )
+        {
+          v44 = *v40;
+          if ( v11 )
+          {
+            v12 = 0;
+            v13 = (uint8_t)(8 - v43);
+            v14 = (_BYTE *)v47;
+            do
+            {
+              ++v12;
+              *v14++ = (signed int)(uint8_t)(v44 & (v30 << v13)) >> v13;
+              v13 += (uint8_t)-v43;
+            }
+            while ( v12 != v11 );
+            v47 += v11;
+            v10 = *(_WORD *)(a2 + 6);
+          }
+          if ( v10 <= ++v48 )
+            break;
+          ++v40;
+        }
+        v8 = *(_WORD *)(a2 + 2);
+      }
+      v9 = v8;
+      ++v36;
+    }
+    while ( v8 > v36 );
+  }
+  if ( v46 )
+  {
+    v16 = v8;
+    if ( v8 )
+    {
+      v17 = (char *)v45;
+      v18 = 0;
+      do
+      {
+        if ( v42 )
+        {
+          v19 = v17;
+          v20 = (int)v39 + v41 * (v16 - v18 - 1);
+          v21 = 0;
+          for ( i = v17; ; v19 = i )
+          {
+            v22 = *v19;
+            if ( *v19 >= 0 )
+              *(_BYTE *)v20 = v37;
+            if ( !(v22 & 0x40) )
+              *(_BYTE *)(v20 + 1) = v37;
+            if ( !(v22 & 0x20) )
+              *(_BYTE *)(v20 + 2) = v37;
+            if ( !(v22 & 0x10) )
+              *(_BYTE *)(v20 + 3) = v37;
+            if ( !(v22 & 8) )
+              *(_BYTE *)(v20 + 4) = v37;
+            if ( !(v22 & 4) )
+              *(_BYTE *)(v20 + 5) = v37;
+            if ( !(v22 & 2) )
+              *(_BYTE *)(v20 + 6) = v37;
+            if ( !(v22 & 1) )
+              *(_BYTE *)(v20 + 7) = v37;
+            ++v21;
+            v20 += 8;
+            if ( v21 == v42 )
+              break;
+            ++i;
+          }
+          v8 = *(_WORD *)(a2 + 2);
+        }
+        ++v18;
+        v16 = v8;
+        v17 += v42;
+      }
+      while ( v8 > v18 );
+    }
+  }
+  v32[2] = v34 + 54;
+  *v32 = *((_DWORD *)v31 + 5) + v34 + 54;
+  fwrite(v33, 1u, 2u, v38);
+  fwrite(v32, 1u, 0xCu, v38);
+  fwrite(v31, 1u, 0x28u, v38);
+  fwrite(v35, 1u, v34, v38);
+  fwrite(v39, 1u, *((_DWORD *)v31 + 5), v38);
+
+  free(v33);
+  free(v32);
+  free(v31);
+  free(v35);
+  free(v39);
+}
+
+void unpack_resource(FILE *fd, char *name, unsigned long len, int pos, unsigned long clen, int decode) {
 
 	unsigned char *data, *cdata;
 	FILE *ofd;
@@ -392,7 +669,11 @@ void unpack_resource(FILE *fd, char *name, unsigned long len, int pos, unsigned 
 	}
 	ofd = fopen(name, "wb");
 	if (ofd == NULL) terminate("Cannot open output file %s", name);
-	fwrite(data, 1, len, ofd);
+	if (decode) {
+		bmp_from_bm(ofd, data, len);
+	} else {
+		fwrite(data, 1, len, ofd);
+	}
 	fclose(ofd);
 	free(cdata);
 	free(data);
@@ -423,7 +704,7 @@ void main_u(char *themefile, char *resource) {
 	hpos = header+32;
 
 	if (strcmp(resource, "-") == 0) {
-		unpack_resource(tfd, "theme.cfg", iheader[5], iheader[6], iheader[7]);
+		unpack_resource(tfd, "theme.cfg", iheader[5], iheader[6], iheader[7], 0);
 		return;
 	}
 
@@ -434,7 +715,7 @@ void main_u(char *themefile, char *resource) {
 			len = *((int *) hpos);
 			pos = *((int *) (hpos+4));
 			clen = *((int *) (hpos+8));
-			unpack_resource(tfd, hpos+12, len, pos, clen);
+			unpack_resource(tfd, hpos+12, len, pos, clen, 0);
 			return;
 
 		}
@@ -446,6 +727,77 @@ void main_u(char *themefile, char *resource) {
 
 	terminate("resource %s is not found in %s", resource, themefile);
 
+}
+
+void main_d(char *themefile) {
+
+	char buf[32];
+	unsigned char *header, *hpos, *hname;
+	unsigned int *iheader;
+	int pos, headersize;
+	unsigned long len, clen;
+	FILE *tfd;
+
+	tfd = fopen(themefile, "rb");
+	if (tfd == NULL) terminate("Cannot open theme file %s", themefile);
+
+	memset(buf, 0, 32);
+	fread(buf, 1, 32, tfd);
+	if (strncmp(buf, PBTSIGNATURE, strlen(PBTSIGNATURE)) != 0) terminate("%s is not a PocketBook theme file");
+	headersize = *((int *) (buf+16));
+	header = malloc(headersize);
+	iheader = (int *) header;
+	fseek(tfd, 0, SEEK_SET);
+	fread(header, 1, headersize, tfd);
+
+	hpos = header+32;
+	
+	int ind = strlen(themefile);
+	themefile[ind - 4] = '\0';
+	
+	mkdir(themefile, 0777);
+	
+	char buff[1024];
+	memset(&buff[0], 0, sizeof(buff));
+	
+	snprintf(&buff[0], sizeof(buff), "%s/res", themefile);
+	mkdir(&buff[0], 0777);
+	
+	snprintf(&buff[0], sizeof(buff), "%s/res4bpp", themefile);
+	mkdir(&buff[0], 0777);
+	
+	snprintf(&buff[0], sizeof(buff), "%s/theme.cfg", themefile);
+
+	// out .cfg
+	printf("resource                                               size     compressed\n");
+	printf("--------------------------------------------------------------------------\n");
+	unpack_resource(tfd, &buff[0], iheader[5], iheader[6], iheader[7], 0);	
+	printf("%-50s %8i      %8i\n", &buff[0], iheader[5], iheader[7]);
+
+	while (hpos < header+headersize) {
+
+		{
+			len = *((int *) hpos);
+			pos = *((int *) (hpos+4));
+			clen = *((int *) (hpos+8));			
+			// hpos+12 - name char
+			hname = strdup(hpos+12);
+			int hlen = strlen(hname);
+			if (hname[hlen - 1] == '4' && hname[hlen - 2] == ':') {
+				hname[hlen - 2] = '\0';
+				snprintf(&buff[0], sizeof(buff), "%s/res4bpp/%s.bmp", themefile, hname);
+			} else {
+				snprintf(&buff[0], sizeof(buff), "%s/res/%s.bmp", themefile, hname);
+			}
+			unpack_resource(tfd, &buff[0], len, pos, clen, 1);
+			printf("%-50s %8i      %8i\n", &buff[0], (int)len, (int)clen);
+			free(hname);
+		}
+
+		hpos += 12;
+		hpos += ((strlen(hpos) / 4) + 1) * 4;
+	}
+	printf("\n");	
 }
 
 void main_l(char *themefile) {
@@ -503,6 +855,9 @@ int main(int argc, char **argv) {
 	} else if (strcmp(argv[1], "-u") == 0) {
 		if (argc < 4) usage();
 		main_u(argv[2], argv[3]);
+	} else if (strcmp(argv[1], "-d") == 0) {
+		if (argc < 3) usage();
+		main_d(argv[2]);
 	} else if (strcmp(argv[1], "-l") == 0) {
 		main_l(argv[2]);
 	} else {
