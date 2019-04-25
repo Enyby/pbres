@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <zlib.h>
 
-#define MAXSIZE 520000
+#define MAXSIZE 1040000
 #define MAXIMGLIST 4096
 #define PBTSIGNATURE "PocketBookTheme"
 #define PBTVERSION 1
